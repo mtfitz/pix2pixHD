@@ -187,7 +187,16 @@ class Pix2PixHDModel(BaseModel):
         # VGG feature matching loss
         loss_G_VGG = 0
         if not self.opt.no_vgg_loss:
-            loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat
+            if self.opt.input_nc == 1:
+                image_shape = fake_image.shape
+                fake_image3 = torch.zeros([image_shape[0], 3, image_shape[2], image_shape[3]])
+                real_image3 = torch.zeros([image_shape[0], 3, image_shape[2], image_shape[3]])
+                #print(real_image.shape, real_image3.shape)
+                fake_image3[:,0,:,:] = fake_image3[:,1,:,:] = fake_image3[:,2,:,:] = fake_image[:,0,:,:]
+                real_image3[:, 0, :, :] = real_image3[:, 1, :, :] = real_image3[:, 2, :, :] = real_image[:,0,:,:]
+                loss_G_VGG = self.criterionVGG(fake_image3.cuda(), real_image3.cuda()) * self.opt.lambda_feat
+            else:
+                loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat
         
         # Only return the fake_B image if necessary to save BW
         return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake ), None if not infer else fake_image ]
